@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+  CostRecordsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: CostRecords
+      AttributeDefinitions:
+        - AttributeName: Service
+          AttributeType: S
+        - AttributeName: Timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Service
+          KeyType: HASH
+        - AttributeName: Timestamp
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+
+  CostCollectorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: cost-collector
+      Handler: app.lambda_handler
+      Runtime: python3.11
+      CodeUri: src/cost_collector/
+      Environment:
+        Variables:
+          TABLE_NAME: CostRecords
+      Policies:
+        - Statement:
+            Effect: Allow
+            Action:
+              - ce:GetCostAndUsage
+              - dynamodb:PutItem
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: "*"
+      Events:
+        DailySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 day)
+            
+  CostAPIApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: CostAPIApi
+      StageName: Prod
+      Cors:
+        AllowMethods: "'GET,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+
+  CostAPI:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: cost-api
+      Handler: app.lambda_handler
+      Runtime: python3.11
+      CodeUri: src/api/
+      Environment:
+        Variables:
+          TABLE_NAME: CostRecords-${AWS::Region}-${AWS::AccountId}
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref CostRecordsTable
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /costs
+            Method: GET
+            RestApiId: !Ref CostAPIApi  
