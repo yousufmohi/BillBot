@@ -1,23 +1,28 @@
-import React, { useEffect, useState } from "react";
-import { getCosts } from "./api";
-import CostTable from "./components/CostTable";
-import CostChart from "./components/CostChart";
-
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Sidebar from "./components/Sidebar";
+import Topbar from "./components/Topbar";
+import Dashboard from "./pages/Dashboard";
+import Trends from "./pages/Trends";
+import Records from "./pages/Records";
+import './App.css'
+import Settings from "./pages/Settings";
 function App() {
-  const [costs, setCosts] = useState([]);
-
-  useEffect(() => {
-    getCosts().then(setCosts);
-  }, []);
-
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">AWS Cost Tracker Dashboard</h1>
-      <CostChart data={costs} />
-      <div className="mt-6">
-        <CostTable data={costs} />
+    <Router>
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar />
+        <div className="flex-1 flex flex-col">
+          <Topbar />
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/trends" element={<Trends />} />
+            <Route path="/records" element={<Records />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </div>
       </div>
-    </div>
+    </Router>
   );
 }
 
